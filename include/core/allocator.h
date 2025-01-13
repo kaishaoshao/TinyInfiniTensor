@@ -14,11 +14,11 @@ namespace infini {
   private:
     Runtime runtime;
 
-    size_t used;
+    size_t used;  // 已经使用内存大小
 
-    size_t peak;
+    size_t peak;  // 空闲内存峰值
 
-    size_t alignment;
+    size_t alignment; // 对齐
 
     // pointer to the memory actually allocated
     void *ptr;
@@ -27,6 +27,7 @@ namespace infini {
     // TODO：可能需要设计一个数据结构来存储free block，以便于管理和合并
     // HINT: 可以使用一个 map 来存储 free block，key 为 block 的起始/结尾地址，value 为 block 的大小
     // =================================== 作业 ===================================
+    std::map<size_t, size_t> free_blocks; // key: 起始地址, value: 块大小
 
   public:
     Allocator(Runtime runtime);
