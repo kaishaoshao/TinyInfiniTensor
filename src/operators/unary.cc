@@ -33,13 +33,43 @@ namespace infini
         IT_ASSERT(checkValid(graph));
     }
 
+    /*
+    Clip 算子分析
+    Clip 算子用于将输入张量的元素限制在一个区间内。区间的上下界由 min 和 max
+    参数指定。如果元素小于 min，则将其替换为 min；如果元素大于 max，则将其替换为max。
+
+    1. 算子功能
+    输入：
+    input：输入张量。
+
+    min（可选）：最小值，必须是标量（形状为空的张量）。
+    max（可选）：最大值，必须是标量（形状为空的张量）。
+
+    输出：
+    output：裁剪后的输出张量。
+
+    默认值：
+    如果未提供 min，则默认值为 numeric_limits::lowest()。
+    如果未提供 max，则默认值为 numeric_limits::max()。
+
+    特殊情况：
+    如果 min > max，则将所有输入值替换为 max。
+
+     */
     optional<vector<Shape>> ClipObj::inferShape(const TensorVec &inputs)
     {
         // =================================== 作业 ===================================
         // TODO：返回经过 clip 操作后的 shape
         // REF: https://onnx.ai/onnx/operators/onnx__Clip.html#clip-13
         // =================================== 作业 ===================================
-        return std::nullopt;
+        // 判断输入张量是否为空
+        if (inputs.empty() || !inputs[0])
+            return std::nullopt;
+
+        const auto input = inputs[0];
+        auto inputShape = input->getDims(); //输入张量的形状
+
+        return {{inputShape}};
     }
 
     std::string ClipObj::toString() const
@@ -59,6 +89,22 @@ namespace infini
         IT_ASSERT(checkValid(graph));
     }
 
+    /*
+      Cast 算子分析
+      Cast
+      算子用于将输入张量的元素转换为指定的数据类型，并返回一个形状相同但数据类型不同的输出张量。
+      以下是Cast 算子的详细分析：
+        1. 算子功能
+        输入：input：输入张量。
+        to：目标数据类型（必须为 DataType 枚举中的类型）。
+
+        输出：
+        output：转换后的输出张量，形状与输入张量相同。
+        数据类型转换规则：
+        支持数值类型之间的转换（如 float 转 int）。
+        支持字符串与数值类型之间的转换（如 string 转 float）。
+        转换时可能会丢失精度或导致值的变化（如 float 转 int 时截断小数部分）。
+    */
     vector<DataType> CastObj::inferDataType(const TensorVec &inputs) const
     {
         // =================================== 作业 ===================================
@@ -66,7 +112,11 @@ namespace infini
         // REF_FILE: src/core/operator.cc
         // REF: https://onnx.ai/onnx/operators/onnx__Cast.html#cast-21
         // =================================== 作业 ===================================
-        return {};
+        if(inputs.empty() || !inputs[0])
+            return {};
+
+        DataType inputDataType = getOutputDataType();
+        return {inputDataType};
     }
 
     optional<vector<Shape>> CastObj::inferShape(const TensorVec &inputs)
@@ -75,7 +125,13 @@ namespace infini
         // TODO：返回经过 cast 操作后的 shape
         // REF: https://onnx.ai/onnx/operators/onnx__Cast.html#cast-21
         // =================================== 作业 ===================================
-        return std::nullopt;
+        if (inputs.empty() || !inputs[0])
+            return std::nullopt;
+
+        const auto input = inputs[0];
+        auto inputShape = input->getDims();
+
+        return {{inputShape}};
     }
 
     std::string CastObj::toString() const
