@@ -154,35 +154,37 @@ namespace infini
         // HINT: 获取分配好的内存指针后，可以调用 tensor 的 setDataBlob 函数给 tensor 绑定内存
         // =================================== 作业 ===================================
         std::vector<std::shared_ptr<TensorObj>> graphTensors = getTensors();
-        
+
         for (const auto &tensor : graphTensors) 
         {
-          Shape shape = tensor->getDims();
           
           // 计算所需的内存大小
           size_t size = tensor->getBytes();
           std::cout << "Allocating " << size << " bytes for tensor " << tensor->toString() << std::endl;
-          // 使用 allocator 分配内存
-          size_t allocatedSize = allocator.alloc(size); // 假设返回的是分配的大小
-          std::cout << "Allocated size: " << allocatedSize << std::endl;
 
-          auto data = allocator.getPtr(); // 假设通过 getPointer() 获取内存地址
-          std::cout << "Allocated memory address: " << data << std::endl;
 
 
           // 获取 Runtime 对象
           Runtime runtime = tensor->getRuntime();
           std::cout << "Runtime: " << runtime << std::endl;
+
+          Allocator allocator(runtime);
+
+          auto data = allocator.getPtr(); // 假设通过 getPointer() 获取内存地址
+          std::cout << "Allocated memory address: " << data << std::endl;
+
+
           // 创建 Blob 对象
           Blob blob = std::make_shared<BlobObj>(runtime, data); // 传递 Runtime 和 void* 参数
               std::cout << "Blob created" << std::endl;
           // 将 Blob 绑定到张量
           tensor->setDataBlob(blob);
           std::cout << "Blob bound to tensor" << std::endl;
-          
+
+          // valgrind --tool=memcheck --leak-check=full ./test_nativecpu_transpose
         }
 
-           allocator.info();
+        allocator.info();
     }
 
     Tensor GraphObj::addTensor(Shape dim, DataType dtype)
