@@ -14,7 +14,9 @@ TEST(Transpose, NativeCpu) {
     Shape permute = {0, 2, 1, 3};
     auto input = g->addTensor({1, 2, 3, 4}, DataType::Float32);
     auto op = g->addOp<TransposeObj>(input, nullptr, permute);
+    std::cout << "graph:" << std::endl;
     g->dataMalloc();
+
     input->setData(IncrementalGenerator());
 
     runtime->run(g);
