@@ -9,8 +9,61 @@ Shape infer_broadcast(const Shape &A, const Shape &B) {
     // TODO：对 A 和 B 进行双向广播，返回广播后的形状。
     // REF: https://github.com/onnx/onnx/blob/main/docs/Broadcasting.md
     // =================================== 作业 ===================================
-    
-    return {};
+    if (A.size() == 0 && B.size() == 0)
+        return {};
+    std::cout << "Input A: ";
+    for (int dim : A)
+      std::cout << dim << " ";
+    std::cout << std::endl;
+
+    std::cout << "Input B: ";
+    for (int dim : B)
+      std::cout << dim << " ";
+    std::cout << std::endl;
+
+    auto rankA = A.size();
+    auto rankB = B.size();
+    auto maxRank = std::max(rankA, rankB);
+
+    // 对齐形状的维度(在较少的形状前面补1)
+    Shape paddedA(maxRank, 1);
+    Shape paddedB(maxRank, 1);
+
+    std::copy(A.rbegin(), A.rend(), paddedA.rbegin());
+    std::copy(B.rbegin(), B.rend(), paddedB.rbegin());
+
+    // 打印对齐后的形状
+    std::cout << "Padded A: ";
+    for (int dim : paddedA)
+      std::cout << dim << " ";
+    std::cout << std::endl;
+
+    std::cout << "Padded B: ";
+    for (int dim : paddedB)
+      std::cout << dim << " ";
+    std::cout << std::endl;
+
+    // 计算广播后形状
+    Shape result(maxRank);
+    for (size_t i = 0; i < maxRank; i++)
+    {
+        int dimA = paddedA[i];
+        int dimB = paddedB[i];
+
+        // 检查是否可以广播
+        if(dimA != dimB && dimA != 1 && dimB != 1)
+            throw std::invalid_argument("Cannot broadcast shapes " +
+                                        std::to_string(dimA) + " and " +
+                                        std::to_string(dimB));
+        result[i] = std::max(dimA, dimB);
+    }
+
+    std::cout << "Broadcasted Shape: ";
+    for (int dim : result)
+      std::cout << dim << " ";
+    std::cout << std::endl;
+
+    return {result};
 }
 
 int get_real_axis(const int &axis, const int &rank) {
