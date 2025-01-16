@@ -16,8 +16,6 @@ TEST(Transpose, NativeCpu) {
     auto op = g->addOp<TransposeObj>(input, nullptr, permute);
     
     g->dataMalloc();
-     
-    
 
     input->setData(IncrementalGenerator());
 

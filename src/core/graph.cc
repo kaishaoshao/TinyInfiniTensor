@@ -155,35 +155,29 @@ namespace infini
         // =================================== 作业 ===================================
         std::vector<std::shared_ptr<TensorObj>> graphTensors = getTensors();
 
+        Runtime runtime = NativeCpuRuntimeObj::getInstance();
+        Allocator allocator = Allocator(runtime);
+
         for (const auto &tensor : graphTensors) 
         {
-          
           // 计算所需的内存大小
           size_t size = tensor->getBytes();
           std::cout << "Allocating " << size << " bytes for tensor " << tensor->toString() << std::endl;
 
-
-
-          // 获取 Runtime 对象
-          Runtime runtime = tensor->getRuntime();
-          std::cout << "Runtime: " << runtime << std::endl;
-
-          Allocator allocator(runtime);
-
-          auto data = allocator.getPtr(); // 假设通过 getPointer() 获取内存地址
-          std::cout << "Allocated memory address: " << data << std::endl;
-
+          // 分配内存
+          void* data = runtime->alloc(size);
+          std::cout << "Allocated memory at address: " << data << std::endl;
 
           // 创建 Blob 对象
           Blob blob = std::make_shared<BlobObj>(runtime, data); // 传递 Runtime 和 void* 参数
-              std::cout << "Blob created" << std::endl;
+          std::cout << "Blob created" << std::endl;
+
           // 将 Blob 绑定到张量
           tensor->setDataBlob(blob);
           std::cout << "Blob bound to tensor" << std::endl;
 
           // valgrind --tool=memcheck --leak-check=full ./test_nativecpu_transpose
         }
-
         allocator.info();
     }
 
