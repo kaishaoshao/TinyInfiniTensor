@@ -41,12 +41,12 @@ namespace infini
         // 获取矩阵的维度
         size_t dimA = A.size();
         size_t dimB = B.size();
-        size_t A_L = A[dimA - 2]; // 矩阵的行数
-        size_t B_L = B[dimB - 2];
-        size_t A_W = A[dimA - 1];
-        size_t B_W = B[dimB - 1]; // 矩阵的列数
+        size_t A_rows = A[dimA - 2]; // 矩阵的行数
+        size_t A_cols = A[dimA - 1];
+        size_t B_rows = B[dimB - 2];
+        size_t B_cols = B[dimB - 1]; // 矩阵的列数
 
-        if(A_W != B_L)
+        if(A_cols != B_rows)
             return std::nullopt;   // A 的列数必须等于 B 的行数
 
         // 处理批量维度
@@ -54,29 +54,39 @@ namespace infini
         Shape batchDimsB(B.begin(), B.end() - 2);
         // 检查批量维度是否匹配或可广播
         if (batchDimsA != batchDimsB) {
-          // 如果批量维度不匹配，尝试广播
           if (batchDimsA.size() != batchDimsB.size()) {
-            return std::nullopt; // 批量维度数量不匹配
+            return std::nullopt; // Batch dimension count mismatch
           }
           for (size_t i = 0; i < batchDimsA.size(); ++i) {
             if (batchDimsA[i] != batchDimsB[i] && batchDimsA[i] != 1 &&
                 batchDimsB[i] != 1) {
-              return std::nullopt; // 批量维度无法广播
+              return std::nullopt; // Batch dimensions cannot be broadcasted
             }
           }
         }
 
         // 计算输出形状
         Shape outputShape;
-        for (size_t i = 0; i < batchDimsA.size(); ++i) {
-          outputShape.push_back(
-              std::max(batchDimsA[i], batchDimsB[i])); // 广播后的批量维度
+        for (size_t i = 0; i < batchDimsA.size(); ++i) 
+        {
+          std::cout << "i: " << i << std::endl;
+          std::cout << "batchDimsA[i]: " << batchDimsA[i] << std::endl;
+          std::cout << "batchDimsB[i]: " << batchDimsB[i] << std::endl;
+          std::cout << "max(batchDimsA[i], batchDimsB[i]): "
+                    << std::max(batchDimsA[i], batchDimsB[i]) << std::endl;     
+          outputShape.push_back(std::max(batchDimsA[i], batchDimsB[i])); // 广播后的批量维度
         }
-         outputShape.push_back(A_L);
-         outputShape.push_back(B_W);
-        std::cout<<"outputShape1: " << outputShape[0] <<std::endl;
-        std::cout << "outputShape: " << outputShape[1] << std::endl;
-        return {outputShape};
+        outputShape.push_back(A_rows); // 输出矩阵的行数
+        outputShape.push_back(B_cols); // 输出矩阵的列数
+
+        // 打印输出形状
+        std::cout << "Output Shape: ";
+        for (int dim : outputShape) {
+          std::cout << dim << " ";
+        }
+        std::cout << std::endl;
+       
+        return {{outputShape}};
     }
 
 } // namespace infini

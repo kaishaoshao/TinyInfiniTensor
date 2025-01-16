@@ -17,7 +17,9 @@ namespace infini
             auto A = g->addTensor(Shape{1, 3, 5});
             auto B = g->addTensor(Shape{1, 5, 2});
             auto matmul = g->addOp<MatmulObj>(A, B, nullptr);
+            std::cout << "Output tensor matmul : " << matmul << std::endl;
             auto C = matmul->getOutputs()[0];
+            std::cout << "Output tensor C: " << C << std::endl; // 打印输出张量
             EXPECT_EQ(C->getDims(), (Shape{1, 3, 2}));
         }
         {
@@ -26,6 +28,7 @@ namespace infini
             auto B = g->addTensor(Shape{3, 5, 2});
             auto matmul = g->addOp<MatmulObj>(A, B, nullptr, true, false);
             auto C = matmul->getOutputs()[0];
+            std::cout << "Output tensor C: " << C << std::endl; // 打印输出张量
             EXPECT_EQ(C->getDims(), (Shape{3, 4, 2}));
         }
         {

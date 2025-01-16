@@ -1,6 +1,6 @@
 ﻿.PHONY : build clean format install-python test-cpp test-onnx
 
-TYPE ?= Release
+TYPE ?= Debug
 TEST ?= ON
 
 CMAKE_OPT = -DCMAKE_BUILD_TYPE=$(TYPE)
@@ -8,7 +8,7 @@ CMAKE_OPT += -DBUILD_TEST=$(TEST)
 
 build:
 	mkdir -p build/$(TYPE)
-	cd build/$(TYPE) && cmake $(CMAKE_OPT) ../.. && make -j8
+	cd build/$(TYPE) && cmake $(CMAKE_OPT) ../.. && make -j16
 
 clean:
 	rm -rf build
