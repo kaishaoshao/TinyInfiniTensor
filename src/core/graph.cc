@@ -1,4 +1,6 @@
 #include "core/graph.h"
+#include "operators/matmul.h"
+#include "operators/transpose.h"
 #include <algorithm>
 #include <numeric>
 #include <queue>
@@ -98,15 +100,126 @@ namespace infini
         return this->sorted = true;
     }
 
+
+
     void GraphObj::optimize()
     {
-        // =================================== 作业 ===================================
-        // TODO: 设计一个算法来实现指定的图优化规则
-        // 图优化规则如下：
-        // 1. 去除冗余的算子（例如，两个相邻的算子都是 transpose 算子，且做的是相反的操作，可以将其全部删除）
-        // 2. 合并算子（例如，矩阵乘算子中含有属性transA、transB，如果其输入存在transpose，且对最后两个维度做交换，就可以将transpose融入到矩阵乘算子的属性中去）
-        // =================================== 作业 ===================================
-    
+      // =================================== 作业 ===================================
+      // TODO: 设计一个算法来实现指定的图优化规则
+      //图优化规则如下：
+      // 1. 去除冗余的算子（例如，两个相邻的算子都是 transpose算子，且做的是相反的操作，可以将其全部删除）
+      // 2. 合并算子（例如，矩阵乘算子中含有属性transA、transB，如果其输入存在transpose，
+      // 且对最后两个维度做交换，就可以将transpose融入到矩阵乘算子的属性中去）
+      // =================================== 作业==============^====================
+      //                                                      |                                                               
+      // 去除冗余的 Transpose 算子                               |
+      // 两个相邻的 Transpose 算子的 permute                     |     
+      // 属性相同（即它们的转置操作相互抵消），则可以删除这两个算子。    | 
+      // 合并MatMul 算子的 Transpose： 如上<---------------------|
+      int ops_size = this->ops.size(); 
+      for (int i = 0; i < ops_size; i++) {
+        auto ops_now = ops[i];
+
+        // 1. 处理冗余的 Transpose 算子
+        if (ops_now->getOpType() == OpType::Transpose) {
+          auto trans_op = as<TransposeObj>(ops_now);
+          auto prev_ops = trans_op->getPredecessors();
+
+          // 检查前驱算子是否是 Transpose 且只有一个后继
+          if (prev_ops.size() == 1) {
+            auto prev_op = prev_ops[0];
+            if (prev_op->getOpType() == OpType::Transpose &&
+                prev_op->getSuccessors().size() == 1) {
+              auto prev_trans_op = as<TransposeObj>(prev_op);
+              Shape prev_permute = prev_trans_op->getPermute();
+              Shape permute = trans_op->getPermute();
+
+              // 如果两个 Transpose 的 permute 属性相同，则删除它们
+              if (prev_permute == permute) {
+                auto input = ops_now->getInputs(0);
+                auto prev_input = prev_trans_op->getInputs(0);
+
+                // 移除前驱 Transpose 的目标
+                prev_input->removeTarget(prev_trans_op);
+                prev_trans_op->removeSuccessors(ops_now);
+
+                // 将当前 Transpose 的后继连接到前驱 Transpose 的输入
+                for (auto ops_next : ops_now->getSuccessors()) {
+                  ops_next->replaceInput(ops_now->getOutput(), prev_input);
+                  prev_input->addTarget(ops_next);
+                  ops_next->removePredecessors(ops_now);
+                }
+
+                // 移除冗余的 Tensor 和算子
+                removeTensor(ops_now->getOutput());
+                removeOperator(ops_now);
+                removeOperator(prev_trans_op);
+                removeTensor(input);
+
+                // 调整索引，因为删除了两个算子
+                i -= 2;
+                ops_size = this->ops.size(); // 更新 ops_size
+              }
+            }
+          }
+        }
+
+        // 2. 处理 MatMul 算子的 Transpose 合并
+        else if (ops_now->getOpType() == OpType::MatMul) {
+          auto matmul_op = as<MatmulObj>(ops_now);
+          auto prev_ops = matmul_op->getPredecessors();
+          
+          int prev_ops_size = prev_ops.size(); 
+          for (int j = 0; j < prev_ops_size; j++) {
+            auto prev_op = prev_ops[j];
+
+            // 检查前驱算子是否是 Transpose 且只有一个后继
+            if (prev_op->getOpType() == OpType::Transpose &&
+                prev_op->getSuccessors().size() == 1) {
+              auto trans_op = as<TransposeObj>(prev_op);
+              Shape permute = trans_op->getPermute();
+              int rank = permute.size();
+
+              // 检查 Transpose 是否只交换最后两个维度
+              if (rank >= 2 && permute[rank - 1] == rank - 2 &&
+                  permute[rank - 2] == rank - 1) {
+                auto trans_op_output = trans_op->getOutput(0);
+                auto matmul_input = matmul_op->getInputs(j);
+
+                // 根据输入位置设置 MatMul 的 transA 或 transB 属性
+                if (trans_op_output->getFuid() ==
+                    matmul_op->getInputs(0)->getFuid()) {
+                  matmul_op->setTransA(true);
+                } else {
+                  matmul_op->setTransB(true);
+                  matmul_input = matmul_op->getInputs(1);
+                }
+
+                // 将 Transpose 的输入直接连接到 MatMul
+                auto trans_input = trans_op->getInputs(0);
+                trans_input->removeTarget(prev_op);
+                trans_input->addTarget(ops_now);
+                trans_op_output->removeTarget(ops_now);
+
+                // 更新 MatMul 的输入
+                ops_now->replaceInput(matmul_input, trans_input);
+                ops_now->removePredecessors(prev_op);
+                prev_op->removeSuccessors(ops_now);
+
+                // 移除冗余的 Transpose 算子和 Tensor
+                removeOperator(prev_op);
+                removeTensor(trans_op_output);
+
+                // 调整索引，因为删除了一个算子
+                i--;
+                ops_size = this->ops.size(); // 更新 ops_size
+                break;                 // 提前退出内层循环
+              }
+            }
+          }
+        } else
+          return;
+      }
     }
 
     Tensor GraphObj::getTensor(int fuid) const
